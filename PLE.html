@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progetto Provietti Simone - Simulatore MABER</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Stili Personalizzati per la simulazione */
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0e7ff 0%, #c3dafe 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        #app-container {
+            width: 100%;
+            max-width: 1200px;
+            background: #fff;
+            border-radius: 1.5rem;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            padding: 2rem;
+            position: relative;
+        }
+        .piattaforma-colonna {
+            height: 400px;
+            width: 100px;
+            background: linear-gradient(to top, #b0b0b0, #d0d0d0);
+            position: relative;
+            box-shadow: inset 0 0 12px rgba(0,0,0,0.3);
+            border-radius: 8px;
+            border: 2px solid #a0a0a0;
+        }
+        .piattaforma {
+            width: 150px;
+            height: 50px;
+            background-color: #004d99;
+            background: linear-gradient(180deg, #0050a3 0%, #003366 100%);
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            transition: bottom 1s ease-in-out; /* Animazione fluida ma non per il movimento piano per piano */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #fff;
+            font-weight: bold;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            border: 2px solid #003366;
+            z-index: 10;
+        }
+        .piattaforma.bloccata {
+            background-color: #e74c3c;
+            background: linear-gradient(180deg, #e74c3c 0%, #c0392b 100%);
+            animation: blink 1s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+        .piano-livello {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background-color: #555;
+            left: 0;
+            transform: translateY(-50%);
+            z-index: 5;
+        }
+        .piano-livello span {
+            position: absolute;
+            left: 110px;
+            top: -10px;
+            font-size: 0.8em;
+            color: #444;
+            white-space: nowrap;
+        }
+        .btn {
+            @apply px-4 py-2 rounded-xl font-bold text-sm text-white transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl;
+        }
+        .btn-primary {
+            @apply bg-blue-600 hover:bg-blue-700 shadow-lg;
+        }
+        .btn-success {
+            @apply bg-emerald-500 hover:bg-emerald-600 shadow-lg;
+        }
+        .btn-warning {
+            @apply bg-yellow-500 hover:bg-yellow-600 shadow-lg;
+        }
+        .btn-danger {
+            @apply bg-red-600 hover:bg-red-700 shadow-lg;
+        }
+        .input-group input[type="number"] {
+            @apply px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 w-full;
+        }
+        .log-simulazione {
+            max-height: 150px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            background: #f9fafb;
+        }
+        .custom-checkbox {
+            @apply w-5 h-5 text-blue-600 bg-gray-100 border-gray-300 rounded-md focus:ring-blue-500;
+        }
+        .message-box-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .message-box-content {
+            background: #fff;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            max-width: 400px;
+            position: relative;
+        }
+        .message-box-close {
+            background: #e74c3c;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .message-box-close:hover {
+            background: #c0392b;
+        }
+        .semaforo {
+            width: 40px;
+            height: 120px;
+            background-color: #222;
+            border-radius: 10px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-around;
+            align-items: center;
+            border: 2px solid #333;
+        }
+        .light {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: #444;
+            transition: background-color 0.3s, box-shadow 0.3s;
+        }
+        .light.red {
+            background-color: #e74c3c;
+            box-shadow: 0 0 15px #e74c3c;
+        }
+        .light.yellow {
+            background-color: #f1c40f;
+            box-shadow: 0 0 15px #f1c40f;
+        }
+        .light.green {
+            background-color: #2ecc71;
+            box-shadow: 0 0 15px #2ecc71;
+        }
+        .light.blink {
+            animation: blink-light 1s infinite;
+        }
+        @keyframes blink-light {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.2; }
+        }
+        .hidden-page {
+            display: none;
+        }
+        /* Stili per i nuovi pulsanti, ora in una fila */
+        .btn-colored {
+            @apply px-4 py-2 rounded-xl font-bold text-sm text-white transition-all duration-300 transform hover:-translate-y-1 hover:shadow-xl;
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container" class="p-8">
+
+    <!-- Sezione 1: Copertina di Accesso -->
+    <div id="copertina" class="text-center transition-opacity duration-500 space-y-8">
+        <h1 class="text-5xl font-extrabold text-blue-800">PROGETTO PRO VIETTI SIMONE</h1>
+        <h2 class="text-3xl font-light text-gray-600 mt-4">Simulatore Avanzato Piattaforma MABER</h2>
+        <p class="mt-8 text-xl text-gray-500">Benvenuto. Accedi al pannello di controllo per avviare la simulazione.</p>
+        <button class="btn btn-primary mt-12 px-12 py-4 text-2xl" onclick="showPage('anagrafe')">Accedi al Gestore</button>
+        <p id="copertina-datetime" class="absolute top-4 right-4 text-sm text-gray-400"></p>
+    </div>
+
+    <!-- Sezione 2: Anagrafe Operatori -->
+    <div id="anagrafe" class="hidden-page transition-opacity duration-500 space-y-8 text-center">
+        <h1 class="text-4xl font-bold text-gray-800">Anagrafe e Accesso Operatore</h1>
+        <p class="text-lg text-gray-500">Seleziona il tuo nome per registrare l'accesso.</p>
+        
+        <div class="flex justify-center mt-8">
+            <select id="operatorSelect" class="p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-blue-500 focus:border-blue-500 w-full max-w-sm text-center">
+                <option value="" disabled selected>Seleziona un operatore</option>
+                <option value="Simone Vietti">Simone Vietti</option>
+                <option value="Marco Rossi">Marco Rossi</option>
+                <option value="Laura Bianchi">Laura Bianchi</option>
+                <option value="Giuseppe Verdi">Giuseppe Verdi</option>
+            </select>
+        </div>
+        
+        <div class="mt-4 p-4 bg-gray-100 rounded-lg shadow-inner">
+            <p id="timbraturaStatus" class="text-gray-600">Nessun accesso registrato.</p>
+        </div>
+
+        <div class="mt-8 flex justify-center space-x-4">
+            <button class="btn btn-primary px-8 py-3" onclick="registraAccesso()">Registra Timbratura</button>
+            <button class="btn btn-primary px-8 py-3" onclick="showPage('gestionale')">Vai al Pannello</button>
+        </div>
+        <p id="anagrafe-datetime" class="absolute top-4 right-4 text-sm text-gray-400"></p>
+    </div>
+
+
+    <!-- Sezione 3: Pannello Gestionale (dashboard) -->
+    <div id="gestionale" class="hidden-page transition-opacity duration-500 space-y-8">
+        <h1 class="text-4xl font-bold text-gray-800">Pannello di Gestione</h1>
+        <p class="text-lg text-gray-500">Dati e stato del sistema in tempo reale.</p>
+        
+        <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-blue-100 p-6 rounded-xl shadow-md border-l-4 border-blue-500">
+                <h3 class="font-bold text-blue-700 text-xl">Stato Piattaforma</h3>
+                <p class="mt-2 text-blue-600 font-semibold" id="gestionaleStatus">Attiva e pronta</p>
+                <p class="text-sm text-blue-500">Ultimo controllo: <span id="gestionaleLastCheck"></span></p>
+            </div>
+            <div class="bg-green-100 p-6 rounded-xl shadow-md border-l-4 border-green-500">
+                <h3 class="font-bold text-green-700 text-xl">Carico Attuale</h3>
+                <p class="mt-2 text-green-600 font-semibold" id="gestionaleCarico">0.00 kg</p>
+                <p class="text-sm text-green-500">Capacità max: 500 kg</p>
+            </div>
+            <div class="bg-red-100 p-6 rounded-xl shadow-md border-l-4 border-red-500">
+                <h3 class="font-bold text-red-700 text-xl">Allarmi</h3>
+                <p class="mt-2 text-red-600 font-semibold" id="gestionaleAllarmi">0 Allarmi attivi</p>
+                <p class="text-sm text-red-500">Ultima emergenza: Nessuna</p>
+            </div>
+        </div>
+
+        <div class="mt-12 flex justify-center space-x-4">
+            <button class="btn btn-primary px-8 py-3" onclick="showPage('simulatore'); resetSimulazione()">Avvia Simulatore</button>
+            <button class="btn btn-primary px-8 py-3" onclick="showPage('manutenzione')">Manutenzione</button>
+            <button class="btn btn-danger px-8 py-3" onclick="showPage('copertina')">Logout</button>
+        </div>
+        <p id="gestionale-datetime" class="absolute top-4 right-4 text-sm text-gray-400"></p>
+    </div>
+    
+    <!-- Sezione 4: Checklist di Manutenzione -->
+    <div id="manutenzione" class="hidden-page transition-opacity duration-500 space-y-8">
+        <h1 class="text-4xl font-bold text-gray-800">Checklist di Manutenzione</h1>
+        <p class="text-lg text-gray-500">Controllare tutti i punti prima di ogni utilizzo.</p>
+        
+        <div class="mt-8 space-y-4">
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="checkFuni" class="custom-checkbox">
+                <label for="checkFuni" class="font-medium text-gray-700">Verifica integrità funi e cavi</label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="checkMotore" class="custom-checkbox">
+                <label for="checkMotore" class="font-medium text-gray-700">Controllo funzionamento motore e freni</label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="checkSensori" class="custom-checkbox">
+                <label for="checkSensori" class="font-medium text-gray-700">Test sensori di sicurezza (finecorsa, blocco)</label>
+            </div>
+            <div class="flex items-center space-x-2">
+                <input type="checkbox" id="checkLubrificazione" class="custom-checkbox">
+                <label for="checkLubrificazione" class="font-medium text-gray-700">Lubrificazione e pulizia ingranaggi</label>
+            </div>
+        </div>
+        <div class="mt-4 p-4 bg-yellow-100 rounded-lg shadow-inner border-l-4 border-yellow-500" id="manutenzioneStatus">
+            <p class="text-yellow-700">Tutti i controlli devono essere spuntati prima di avviare la piattaforma.</p>
+        </div>
+
+        <div class="mt-8 flex justify-center space-x-4">
+            <button class="btn btn-primary px-8 py-3" onclick="showPage('gestionale')">Torna al Pannello</button>
+        </div>
+        <p id="manutenzione-datetime" class="absolute top-4 right-4 text-sm text-gray-400"></p>
+    </div>
+
+
+    <!-- Sezione 5: Simulatore Avanzato -->
+    <div id="simulatore" class="hidden-page transition-opacity duration-500">
+        <div class="text-center">
+            <h1 class="text-4xl font-extrabold text-gray-800">Simulatore Avanzato Piattaforma MABER</h1>
+            <h2 class="text-xl font-light text-gray-500 mt-2">PROGETTO PRO VIETTI SIMONE</h2>
+            <button class="btn btn-primary mt-4" onclick="showPage('gestionale')">Torna al Gestore</button>
+        </div>
+
+        <div class="flex flex-col lg:flex-row gap-8 mt-8">
+            <!-- Pannello di Controllo -->
+            <div class="lg:w-1/2 p-6 bg-gray-50 rounded-xl shadow-inner space-y-6">
+                <h3 class="text-2xl font-semibold text-gray-700 border-b pb-2">Controlli Operativi</h3>
+
+                <!-- Controlli di Sicurezza Preliminari -->
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="keySwitch" class="custom-checkbox">
+                        <label for="keySwitch" class="font-medium text-gray-700">Interruttore a Chiave</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="doorsClosed" class="custom-checkbox">
+                        <label for="doorsClosed" class="font-medium text-gray-700">Sensori Porta/Cancello chiusi</label>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="checkbox" id="harnessCheck" class="custom-checkbox">
+                        <label for="harnessCheck" class="font-medium text-gray-700">Operatori Agganciati (Imbracatura)</label>
+                    </div>
+                </div>
+
+                <!-- Input di Controllo -->
+                <div class="input-group space-y-4">
+                    <label for="destinazionePiano" class="font-medium text-gray-700">Piano di Arrivo:</label>
+                    <input type="number" id="destinazionePiano" value="9" min="0" max="9" class="w-full">
+                </div>
+                <div class="input-group space-y-4">
+                    <label for="pesoMateriali" class="font-medium text-gray-700">Peso materiali (kg):</label>
+                    <input type="number" id="pesoMateriali" value="200" min="0" class="w-full">
+                </div>
+                <div class="input-group space-y-4">
+                    <label for="numPersone" class="font-medium text-gray-700">N° persone (max 3):</label>
+                    <input type="number" id="numPersone" value="1" min="0" max="3" class="w-full">
+                </div>
+                <div class="input-group space-y-4">
+                    <label for="windSpeed" class="font-medium text-gray-700">Velocità Vento (km/h):</label>
+                    <input type="number" id="windSpeed" value="10" min="0" class="w-full">
+                </div>
+
+                <!-- Telecomando con i pulsanti di controllo -->
+                <div id="telecomando" class="w-full flex flex-wrap justify-center gap-4 mt-4">
+                    <button class="btn-colored bg-green-600 hover:bg-green-700 shadow-lg" id="btnAvvia" onclick="avviaSalita()">Avvia Salita</button>
+                    <button class="btn-colored bg-blue-600 hover:bg-blue-700 shadow-lg" id="btnVerifica" onclick="verificaCarico()">Verifica Carico</button>
+                    <button class="btn-colored bg-orange-500 hover:bg-orange-600 shadow-lg" id="btnFerma" onclick="fermaPiattaforma()" disabled>Ferma</button>
+                    <button class="btn-colored bg-gray-500 hover:bg-gray-600 shadow-lg" id="btnReset" onclick="resetSimulazione()">Reset</button>
+                    <button class="btn-colored bg-red-700 hover:bg-red-800 shadow-lg animate-pulse" id="btnGuasto" onclick="simulaGuasto()">STOP DI EMERGENZA</button>
+                    <button class="btn-colored bg-emerald-600 hover:bg-emerald-700 shadow-lg" id="btnResetEmergenza" onclick="resetEmergenza()" disabled>Sblocca Emergenza</button>
+                </div>
+            </div>
+
+            <!-- Area di Simulazione e Stato -->
+            <div class="lg:w-1/2 p-6 bg-gray-50 rounded-xl shadow-inner flex flex-col items-center space-y-4">
+                <h3 class="text-2xl font-semibold text-gray-700 border-b pb-2">Simulazione Visiva e Stato</h3>
+                
+                <div class="flex items-center space-x-4">
+                    
+                    <!-- Immagine LIFT -->
+                    <div class="w-1/3">
+                        <img 
+                            src="https://content-fetcher.com/uploaded:image_6984ac.jpg-8b48784c-0fd7-418d-ae6f-e9f38fe63695"
+                            alt="Immagine della piattaforma LILT" 
+                            class="w-full h-auto rounded-lg shadow-md"
+                        />
+                    </div>
+
+                    <!-- Semaforo e testo STATO -->
+                    <div class="flex flex-col items-center space-y-2">
+                        <p class="font-bold text-gray-700">STATO</p>
+                        <div class="semaforo">
+                            <div class="light red" id="lightRed"></div>
+                            <div class="light" id="lightYellow"></div>
+                            <div class="light" id="lightGreen"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Piattaforma e Piani -->
+                    <div class="relative w-[100px] h-[400px]">
+                        <div class="piattaforma-colonna">
+                            <!-- Livelli dei Piani -->
+                            <div class="piano-livello" style="bottom: 0%;"><span>Piano 0 (Terra)</span></div>
+                            <div class="piano-livello" style="bottom: 10%;"><span>Piano 1</span></div>
+                            <div class="piano-livello" style="bottom: 20%;"><span>Piano 2</span></div>
+                            <div class="piano-livello" style="bottom: 30%;"><span>Piano 3</span></div>
+                            <div class="piano-livello" style="bottom: 40%;"><span>Piano 4</span></div>
+                            <div class="piano-livello" style="bottom: 50%;"><span>Piano 5</span></div>
+                            <div class="piano-livello" style="bottom: 60%;"><span>Piano 6</span></div>
+                            <div class="piano-livello" style="bottom: 70%;"><span>Piano 7</span></div>
+                            <div class="piano-livello" style="bottom: 80%;"><span>Piano 8</span></div>
+                            <div class="piano-livello" style="bottom: 90%;"><span>Piano 9</span></div>
+                            <div class="piattaforma" id="piattaforma">Piano 0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dati in Tempo Reale -->
+                <div class="w-full bg-blue-100 p-4 rounded-lg shadow-md border-l-4 border-blue-500 mt-4">
+                    <p class="font-semibold text-blue-800">Dati Piattaforma in Tempo Reale:</p>
+                    <p>Altezza: <span id="altezzaCorrente" class="font-mono">0.00</span> m</p>
+                    <p>Peso Totale: <span id="pesoTotale" class="font-mono">0.00</span> kg</p>
+                    <p>Velocità Vento: <span id="velocitaVento" class="font-mono">0</span> km/h</p>
+                    <p>Stato Porta/Cancello: <span id="statoPortaSpan">Chiusa</span></p>
+                </div>
+
+                <!-- Log di Simulazione -->
+                <div class="w-full mt-4 p-4 bg-gray-100 rounded-lg shadow-inner h-40">
+                    <h4 class="font-semibold text-gray-700">Log di Simulazione:</h4>
+                    <div id="log-container" class="log-simulazione mt-2">
+                        <!-- I log verranno aggiunti qui via JavaScript -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Casella di Messaggio (per alert) -->
+        <div id="messageBox" class="message-box-overlay">
+            <div class="message-box-content">
+                <h3 id="messageTitle" class="text-xl font-bold mb-4 text-red-700"></h3>
+                <p id="messageText" class="text-md text-gray-700 mb-6"></p>
+                <button id="messageCloseButton" class="message-box-close">Chiudi</button>
+            </div>
+        </div>
+        <p id="simulatore-datetime" class="absolute top-4 right-4 text-sm text-gray-400"></p>
+    </div>
+</div>
+
+<script>
+    // --- Variabili di Stato Globali ---
+    let inMovimento = false;
+    let inGuasto = false;
+    let emergencyStopAttivato = false;
+    let pianoCorrente = 0;
+    let destinazionePiano = 0;
+    let intervalloMovimento;
+    let altezzaPiattaforma = 0;
+    let pesoAttuale = 0;
+    let velocitaVento = 0;
+    let statoMotore = 'spento';
+
+    // Costanti per il simulatore
+    const ALTEZZA_PIANO = 4; // in metri
+    const MAX_CARICO = 500; // in kg
+    const PESO_MEDIO_PERSONA = 80; // in kg
+
+    // --- Riferimenti agli Elementi del DOM ---
+    const copertina = document.getElementById('copertina');
+    const anagrafe = document.getElementById('anagrafe');
+    const gestionale = document.getElementById('gestionale');
+    const simulatore = document.getElementById('simulatore');
+    const manutenzione = document.getElementById('manutenzione');
+
+    const piattaforma = document.getElementById('piattaforma');
+    const altezzaCorrenteSpan = document.getElementById('altezzaCorrente');
+    const pesoTotaleSpan = document.getElementById('pesoTotale');
+    const velocitaVentoSpan = document.getElementById('velocitaVento');
+    const statoPortaSpan = document.getElementById('statoPortaSpan');
+    const logContainer = document.getElementById('log-container');
+
+    const lightRed = document.getElementById('lightRed');
+    const lightYellow = document.getElementById('lightYellow');
+    const lightGreen = document.getElementById('lightGreen');
+    const btnAvvia = document.getElementById('btnAvvia');
+    const btnFerma = document.getElementById('btnFerma');
+    const btnResetEmergenza = document.getElementById('btnResetEmergenza');
+
+    const keySwitch = document.getElementById('keySwitch');
+    const doorsClosed = document.getElementById('doorsClosed');
+    const harnessCheck = document.getElementById('harnessCheck');
+    const destinazionePianoInput = document.getElementById('destinazionePiano');
+    const pesoMaterialiInput = document.getElementById('pesoMateriali');
+    const numPersoneInput = document.getElementById('numPersone');
+    const windSpeedInput = document.getElementById('windSpeed');
+    
+    // Riferimenti per la casella di messaggio
+    const messageBox = document.getElementById('messageBox');
+    const messageTitle = document.getElementById('messageTitle');
+    const messageText = document.getElementById('messageText');
+    const messageCloseButton = document.getElementById('messageCloseButton');
+    
+    // --- Funzioni di Utility ---
+
+    /**
+     * Mostra una pagina specifica nascondendo le altre.
+     * @param {string} pageId - L'ID della pagina da mostrare.
+     */
+    function showPage(pageId) {
+        document.querySelectorAll('#app-container > div').forEach(page => {
+            if (page.id === pageId) {
+                page.classList.remove('hidden-page');
+            } else {
+                page.classList.add('hidden-page');
+            }
+        });
+    }
+
+    /**
+     * Aggiorna lo stato visivo del semaforo.
+     * @param {string} color - Il colore da accendere ('rosso', 'giallo', 'verde').
+     * @param {boolean} blinking - Se la luce deve lampeggiare.
+     */
+    function aggiornaSemaforo(color, blinking = false) {
+        const lights = {
+            red: lightRed,
+            yellow: lightYellow,
+            green: lightGreen
+        };
+
+        // Resetta tutte le luci
+        Object.values(lights).forEach(light => {
+            light.classList.remove('red', 'yellow', 'green', 'blink');
+        });
+
+        // Accende la luce desiderata
+        if (lights[color]) {
+            lights[color].classList.add(color);
+            if (blinking) {
+                lights[color].classList.add('blink');
+            }
+        }
+    }
+
+    /**
+     * Aggiunge un messaggio al log di simulazione.
+     * @param {string} message - Il messaggio da aggiungere.
+     * @param {string} type - Tipo di messaggio ('normale', 'avviso', 'errore').
+     */
+    function aggiungiLog(message, type = 'normale') {
+        const logEntry = document.createElement('p');
+        const timestamp = new Date().toLocaleTimeString();
+        logEntry.textContent = `[${timestamp}] ${message}`;
+
+        switch (type) {
+            case 'avviso':
+                logEntry.className = 'text-yellow-700 font-semibold';
+                break;
+            case 'errore':
+                logEntry.className = 'text-red-700 font-bold';
+                break;
+            case 'successo':
+                logEntry.className = 'text-green-700 font-semibold';
+                break;
+            default:
+                logEntry.className = 'text-gray-600';
+                break;
+        }
+
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight; // Scrolla in basso
+    }
+
+    /**
+     * Mostra una casella di messaggio personalizzata.
+     * @param {string} title - Titolo del messaggio.
+     * @param {string} text - Testo del messaggio.
+     */
+    function showMessage(title, text) {
+        messageTitle.textContent = title;
+        messageText.textContent = text;
+        messageBox.style.display = 'flex';
+    }
+    
+    // --- Logica Principale della Simulazione ---
+
+    /**
+     * Aggiorna l'interfaccia con i valori correnti della simulazione.
+     */
+    function updateGestionale() {
+        const statusElement = document.getElementById('gestionaleStatus');
+        const caricoElement = document.getElementById('gestionaleCarico');
+        const allarmiElement = document.getElementById('gestionaleAllarmi');
+        const lastCheckElement = document.getElementById('gestionaleLastCheck');
+
+        // Aggiorna lo stato della piattaforma
+        if (inGuasto || emergencyStopAttivato) {
+            statusElement.textContent = 'Guasto! Inattiva.';
+            statusElement.className = 'mt-2 text-red-600 font-semibold';
+        } else if (inMovimento) {
+            statusElement.textContent = 'In Movimento...';
+            statusElement.className = 'mt-2 text-blue-600 font-semibold';
+        } else {
+            statusElement.textContent = 'Attiva e pronta';
+            statusElement.className = 'mt-2 text-green-600 font-semibold';
+        }
+
+        // Aggiorna carico
+        caricoElement.textContent = `${pesoAttuale.toFixed(2)} kg`;
+        
+        // Aggiorna allarmi
+        const allarmiCount = (inGuasto || emergencyStopAttivato) ? 1 : 0;
+        allarmiElement.textContent = `${allarmiCount} Allarmi attivi`;
+
+        // Aggiorna l'ultimo controllo
+        lastCheckElement.textContent = new Date().toLocaleString('it-IT');
+    }
+
+    /**
+     * Aggiorna l'orario su tutte le pagine.
+     */
+    function updateDateTime() {
+        const now = new Date();
+        const formattedDate = now.toLocaleDateString('it-IT');
+        const formattedTime = now.toLocaleTimeString('it-IT');
+        const dateTimeString = `${formattedDate} ${formattedTime}`;
+
+        document.getElementById('copertina-datetime').textContent = dateTimeString;
+        document.getElementById('anagrafe-datetime').textContent = dateTimeString;
+        document.getElementById('gestionale-datetime').textContent = dateTimeString;
+        document.getElementById('manutenzione-datetime').textContent = dateTimeString;
+        document.getElementById('simulatore-datetime').textContent = dateTimeString;
+    }
+
+    /**
+     * Registra l'accesso dell'operatore selezionato.
+     */
+    function registraAccesso() {
+        const operatorSelect = document.getElementById('operatorSelect');
+        const timbraturaStatus = document.getElementById('timbraturaStatus');
+        if (operatorSelect.value) {
+            timbraturaStatus.textContent = `Accesso registrato per ${operatorSelect.value} alle ${new Date().toLocaleTimeString()}.`;
+            timbraturaStatus.className = 'text-green-600 font-semibold';
+        } else {
+            timbraturaStatus.textContent = 'Seleziona un operatore per registrare l\'accesso.';
+            timbraturaStatus.className = 'text-red-600';
+        }
+    }
+
+
+    /**
+     * Effettua la verifica preliminare prima di avviare la salita.
+     */
+    function verificaCarico() {
+        if (inMovimento || inGuasto || emergencyStopAttivato) {
+            return showMessage("Attenzione", "La piattaforma è già in movimento o bloccata. Non è possibile eseguire la verifica.");
+        }
+
+        const pesoMateriali = parseFloat(pesoMaterialiInput.value);
+        const numPersone = parseInt(numPersoneInput.value);
+
+        if (isNaN(pesoMateriali) || isNaN(numPersone) || pesoMateriali < 0 || numPersone < 0) {
+            return showMessage("Errore di Input", "Inserisci valori validi per peso e numero di persone.");
+        }
+
+        pesoAttuale = pesoMateriali + (numPersone * PESO_MEDIO_PERSONA);
+        
+        // Aggiorna i valori nel pannello di controllo
+        pesoTotaleSpan.textContent = `${pesoAttuale.toFixed(2)}`;
+
+        aggiungiLog(`Verifica del carico in corso... Peso totale calcolato: ${pesoAttuale.toFixed(2)} kg.`, 'avviso');
+
+        if (pesoAttuale > MAX_CARICO) {
+            piattaforma.classList.add('bloccata');
+            aggiornaSemaforo('red', true);
+            aggiungiLog(`ERRORE: Carico (${pesoAttuale.toFixed(2)} kg) supera il limite massimo (${MAX_CARICO} kg)! Impossibile avviare.`, 'errore');
+            return showMessage("Errore di Sovraccarico", `Il peso totale di ${pesoAttuale.toFixed(2)} kg supera il limite di ${MAX_CARICO} kg. La piattaforma è bloccata.`);
+        } else {
+            piattaforma.classList.remove('bloccata');
+            aggiungiLog(`Verifica del carico completata. Carico OK.`, 'successo');
+            aggiornaSemaforo('yellow');
+            showMessage("Verifica Completata", "Il carico è all'interno dei limiti di sicurezza. La piattaforma è pronta per il movimento.");
+        }
+    }
+
+    /**
+     * Avvia la salita o la discesa della piattaforma.
+     */
+    function avviaSalita() {
+        // Controlli di sicurezza pre-avvio
+        if (inMovimento) {
+            return showMessage("Attenzione", "La piattaforma è già in movimento.");
+        }
+        if (inGuasto || emergencyStopAttivato) {
+            return showMessage("Errore", "La piattaforma è in stato di guasto o emergenza. Eseguire il reset.");
+        }
+        if (!keySwitch.checked || !doorsClosed.checked || !harnessCheck.checked) {
+            return showMessage("Controlli di Sicurezza", "Attivare l'interruttore a chiave, chiudere le porte e verificare le imbracature prima di procedere.");
+        }
+        if (piattaforma.classList.contains('bloccata')) {
+            return showMessage("Errore di Sovraccarico", "Carico eccessivo rilevato. Non è possibile avviare.");
+        }
+        
+        destinazionePiano = parseInt(destinazionePianoInput.value);
+        if (isNaN(destinazionePiano) || destinazionePiano < 0 || destinazionePiano > 9) {
+            return showMessage("Destinazione non valida", "Seleziona un piano di destinazione tra 0 e 9.");
+        }
+
+        if (pianoCorrente === destinazionePiano) {
+            aggiungiLog(`La piattaforma si trova già al piano ${pianoCorrente}.`, 'avviso');
+            return showMessage("Movimento non necessario", `La piattaforma è già al piano ${pianoCorrente}.`);
+        }
+
+        // Simula il movimento
+        inMovimento = true;
+        btnAvvia.disabled = true;
+        btnFerma.disabled = false;
+        aggiornaSemaforo('green');
+        aggiungiLog(`Avvio movimento verso il piano ${destinazionePiano}.`, 'normale');
+
+        const direzione = destinazionePiano > pianoCorrente ? 1 : -1;
+        
+        intervalloMovimento = setInterval(() => {
+            pianoCorrente += direzione;
+            altezzaPiattaforma = pianoCorrente * ALTEZZA_PIANO;
+            
+            // Aggiorna l'interfaccia
+            piattaforma.style.bottom = `${pianoCorrente * 10}%`;
+            piattaforma.textContent = `Piano ${pianoCorrente}`;
+            altezzaCorrenteSpan.textContent = altezzaPiattaforma.toFixed(2);
+            aggiungiLog(`Piattaforma in movimento. Raggiunto piano ${pianoCorrente}.`);
+
+            if (pianoCorrente === destinazionePiano) {
+                clearInterval(intervalloMovimento);
+                inMovimento = false;
+                btnAvvia.disabled = false;
+                btnFerma.disabled = true;
+                aggiornaSemaforo('yellow');
+                aggiungiLog(`Piattaforma arrivata a destinazione al piano ${pianoCorrente}.`, 'successo');
+                showMessage("Arrivo a Destinazione", `La piattaforma è arrivata al piano ${pianoCorrente}.`);
+            }
+        }, 2000); // Ritardo di 2 secondi tra un piano e l'altro per simulazione
+    }
+
+    /**
+     * Ferma il movimento della piattaforma in qualsiasi momento.
+     */
+    function fermaPiattaforma() {
+        if (!inMovimento) {
+            return;
+        }
+
+        clearInterval(intervalloMovimento);
+        inMovimento = false;
+        btnAvvia.disabled = false;
+        btnFerma.disabled = true;
+        aggiornaSemaforo('red');
+        aggiungiLog(`Movimento interrotto al piano ${pianoCorrente}.`, 'errore');
+        showMessage("Movimento Interrotto", `La piattaforma è stata fermata al piano ${pianoCorrente}.`);
+    }
+
+    /**
+     * Simula un guasto o un'emergenza.
+     */
+    function simulaGuasto() {
+        if (inGuasto) {
+            return showMessage("Attenzione", "La piattaforma è già in stato di guasto.");
+        }
+        
+        clearInterval(intervalloMovimento);
+        inMovimento = false;
+        inGuasto = true;
+        emergencyStopAttivato = true;
+
+        // Disabilita tutti i controlli tranne il reset di emergenza
+        btnAvvia.disabled = true;
+        btnFerma.disabled = true;
+        btnResetEmergenza.disabled = false;
+        piattaforma.classList.add('bloccata');
+        aggiornaSemaforo('red', true);
+
+        aggiungiLog('ALLARME: STOP DI EMERGENZA ATTIVATO!', 'errore');
+        showMessage("STOP DI EMERGENZA", "Tutte le funzioni sono bloccate. Rimuovere la causa dell'emergenza e premere 'Sblocca Emergenza' per ripristinare.");
+    }
+
+    /**
+     * Resetta lo stato di emergenza.
+     */
+    function resetEmergenza() {
+        if (!emergencyStopAttivato) {
+            return;
+        }
+
+        emergencyStopAttivato = false;
+        inGuasto = false;
+        btnAvvia.disabled = false;
+        btnFerma.disabled = true;
+        btnResetEmergenza.disabled = true;
+        piattaforma.classList.remove('bloccata');
+        aggiornaSemaforo('red');
+        
+        aggiungiLog('Reset di emergenza completato. Sistema ripristinato.', 'successo');
+        showMessage("Reset Completato", "Il sistema è stato ripristinato. Eseguire una nuova verifica del carico.");
+    }
+    
+    /**
+     * Riporta la simulazione allo stato iniziale.
+     */
+    function resetSimulazione() {
+        clearInterval(intervalloMovimento);
+        inMovimento = false;
+        inGuasto = false;
+        emergencyStopAttivato = false;
+        pianoCorrente = 0;
+        altezzaPiattaforma = 0;
+        pesoAttuale = 0;
+        
+        piattaforma.style.bottom = '0%';
+        piattaforma.textContent = 'Piano 0';
+        altezzaCorrenteSpan.textContent = '0.00';
+        pesoTotaleSpan.textContent = '0.00';
+        statoPortaSpan.textContent = doorsClosed.checked ? 'Chiusa' : 'Aperta';
+        
+        btnAvvia.disabled = false;
+        btnFerma.disabled = true;
+        btnResetEmergenza.disabled = true;
+        piattaforma.classList.remove('bloccata');
+        
+        aggiungiLog('Simulazione resettata. Pronta per un nuovo ciclo.', 'normale');
+        aggiornaSemaforo('red');
+        updateGestionale();
+    }
+    
+
+    // --- Listener e Inizializzazione ---
+    window.onload = function() {
+        showPage('copertina');
+        updateDateTime();
+        setInterval(updateDateTime, 1000);
+    };
+
+    // Chiude la casella di messaggio
+    messageCloseButton.addEventListener('click', () => {
+        messageBox.style.display = 'none';
+    });
+
+    // Aggiungo un listener per i controlli di sicurezza
+    if(keySwitch) keySwitch.addEventListener('change', () => {
+        if (!inMovimento && !inGuasto && !emergencyStopAttivato) {
+            if (keySwitch.checked) {
+                aggiungiLog('Interruttore a chiave attivato. Pronto per la verifica.');
+                aggiornaSemaforo('giallo');
+                if(btnAvvia) btnAvvia.disabled = false;
+            } else {
+                aggiungiLog('Interruttore a chiave disattivato.');
+                aggiornaSemaforo('red');
+                if(btnAvvia) btnAvvia.disabled = true;
+            }
+            updateGestionale();
+        }
+    });
+
+    if(doorsClosed) doorsClosed.addEventListener('change', () => {
+        if (!inMovimento && !emergencyStopAttivato) {
+            if(statoPortaSpan) statoPortaSpan.textContent = doorsClosed.checked ? 'Chiusa' : 'Aperta';
+            if (!doorsClosed.checked && inMovimento) {
+                 fermaPiattaforma();
+                 aggiungiLog('ATTENZIONE: Porta aperta durante il movimento!', 'errore');
+                 showMessage("Errore di Sicurezza", "La piattaforma si è fermata perché la porta è stata aperta.");
+            } else if (!doorsClosed.checked) {
+                aggiungiLog('ATTENZIONE: Porta/Cancello aperta.', 'avviso');
+                aggiornaSemaforo('red');
+            } else {
+                 aggiungiLog('Porta/Cancello chiusa.');
+                 aggiornaSemaforo(keySwitch.checked ? 'yellow' : 'red');
+            }
+            updateGestionale();
+        }
+    });
+
+    if(harnessCheck) harnessCheck.addEventListener('change', () => {
+        if (harnessCheck.checked) {
+            aggiungiLog('Imbracature operatori verificate e agganciate.', 'successo');
+        } else {
+            aggiungiLog('ATTENZIONE: Imbracature non agganciate.', 'avviso');
+        }
+    });
+
+    // Listener per la pagina di manutenzione
+    const manutenzioneCheckboxes = document.querySelectorAll('#manutenzione input[type="checkbox"]');
+    manutenzioneCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', () => {
+            const allChecked = Array.from(manutenzioneCheckboxes).every(cb => cb.checked);
+            const statusElement = document.getElementById('manutenzioneStatus');
+            if (allChecked) {
+                statusElement.innerHTML = '<p class="text-green-700">Manutenzione completata. Il sistema è pronto per l\'uso.</p>';
+            } else {
+                statusElement.innerHTML = '<p class="text-yellow-700">Tutti i controlli devono essere spuntati prima di avviare la piattaforma.</p>';
+            }
+        });
+    });
+
+</script>
+</body>
+</html>
