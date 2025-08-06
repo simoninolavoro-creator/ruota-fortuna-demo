@@ -1,0 +1,2 @@
+# ruota-fortuna-demo
+passatempo
